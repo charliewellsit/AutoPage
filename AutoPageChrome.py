@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import schedule
@@ -62,6 +63,18 @@ def job():
     # Fill last name
     last_name_box = driver.find_element(By.NAME, "lastName")
     last_name_box.send_keys("Yu")
+
+     # Drop-down 1: Wait for it to appear before selecting
+    dropdown1 = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.NAME, "relationship"))
+    )
+    Select(dropdown1).select_by_visible_text("Spouse")
+
+    dropdown2 = Select(driver.find_element(By.NAME, "ticketType"))
+    dropdown2.select_by_visible_text("Adult")
+
+    dropdown3 = Select(driver.find_element(By.NAME, "anotherField"))
+    dropdown3.select_by_visible_text("Option 1")
 
 # Schedule job
 schedule.every().day.at("8:00").do(job)

@@ -29,12 +29,12 @@ def book_ticket(ticket):
     today = datetime.today().day
 
     # run in background without GUI
-    # options = Options()
+    options = Options()
     # options.add_argument("--headless")  
     # options.add_argument("--window-size=1920,1080")
-    # driver = webdriver.Chrome(options=options) 
+    options.add_experimental_option("detach", True)  # Keep browser open
 
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(options=options)
     driver.get(url)  # same URL for both tickets
 
     # Select date
