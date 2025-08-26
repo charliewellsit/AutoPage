@@ -2,9 +2,14 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
+from selenium.webdriver.edge.options import Options
 
-driver = webdriver.Edge()  # Selenium handles driver management
+Edge_options = Options()
+
+# Add the experimental option to detach the browser
+Edge_options.add_experimental_option("detach", True)
+
+driver = webdriver.Edge(options=Edge_options)  # Selenium handles driver management
 driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
 
 # Wait until the button with today’s number appears and click it
@@ -48,7 +53,3 @@ first_name_box.send_keys("Juntao")
 # Fill last name
 last_name_box = driver.find_element(By.NAME, "lastName")
 last_name_box.send_keys("Yu")
-
-time.sleep(50)
-driver.quit()
-

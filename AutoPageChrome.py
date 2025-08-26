@@ -12,12 +12,13 @@ def job():
     today = datetime.today().day
 
     # run in background without GUI
-    # options = Options()
+    options = Options()
     # options.add_argument("--headless")  
     # options.add_argument("--window-size=1920,1080")
     # driver = webdriver.Chrome(options=options) 
+    options.add_experimental_option("detach", True)  # Keep browser open
 
-    driver = webdriver.Chrome()  # Selenium handles driver management
+    driver = webdriver.Chrome(options=options)  # Selenium handles driver management
     driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
 
     # Wait until the button with today’s number appears and click it
@@ -61,9 +62,6 @@ def job():
     # Fill last name
     last_name_box = driver.find_element(By.NAME, "lastName")
     last_name_box.send_keys("Yu")
-
-    time.sleep(10)
-    driver.quit()
 
 # Schedule job
 schedule.every().day.at("8:00").do(job)
