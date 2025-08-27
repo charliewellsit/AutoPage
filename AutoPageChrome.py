@@ -30,54 +30,56 @@ def job():
     
     # Wait until the time button "10:00am" appears and click it
     time_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='10:00am']"))
+        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='2:00pm']"))
     )
     time_button.click()
 
-    # Now click the plus button
-    plus_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.CLASS_NAME, "plus"))
+    # Wait until the plus button is enabled (data-disabled="false")
+    plus_button = WebDriverWait(driver, 60).until(
+        EC.element_to_be_clickable(
+            (By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']")
+        )
     )
     plus_button.click()
 
-    # Click the continue button
-    continue_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='checkout-btn']"))
+    # Wait until the continue button is enabled
+    continue_button = WebDriverWait(driver, 60).until(
+        EC.presence_of_element_located((By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']"))
     )
     continue_button.click()
 
-    # Fill email
-    email_box = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.NAME, "email"))
+    # Wait until the First Name input is present, then fill it
+    first_name_input = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.ID, "firstName"))
     )
-    email_box.send_keys("yujuntao1993@gmail.com")
+    first_name_input.send_keys("Juntao")
 
-    # Fill phone
-    phone_box = driver.find_element(By.NAME, "phone")
-    phone_box.send_keys("0474836509")
-
-    # Fill first name
-    first_name_box = driver.find_element(By.NAME, "firstName")
-    first_name_box.send_keys("Juntao")
-
-    # Fill last name
-    last_name_box = driver.find_element(By.NAME, "lastName")
-    last_name_box.send_keys("Yu")
-
-     # Drop-down 1: Wait for it to appear before selecting
-    dropdown1 = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.NAME, "relationship"))
+    # Last Name
+    last_name_input = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.ID, "lastName"))
     )
-    Select(dropdown1).select_by_visible_text("Spouse")
+    last_name_input.send_keys("Yu")
 
-    dropdown2 = Select(driver.find_element(By.NAME, "ticketType"))
-    dropdown2.select_by_visible_text("Adult")
+    # Email
+    email_input = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.ID, "email"))
+    )
+    email_input.send_keys("yujuntao1993@gmail.com")
 
-    dropdown3 = Select(driver.find_element(By.NAME, "anotherField"))
-    dropdown3.select_by_visible_text("Option 1")
+    # Mobile
+    mobile_input = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.ID, "mobile"))
+    )
+    mobile_input.send_keys("0474836509")
+
+    # Wait until the "Continue to Ticket Info" button is clickable, then click it
+    ticket_info_continue = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
+    )
+    ticket_info_continue.click()
 
 # Schedule job
-schedule.every().day.at("8:00").do(job)
+schedule.every().day.at("12:00").do(job)
 
 while True:
     schedule.run_pending()
