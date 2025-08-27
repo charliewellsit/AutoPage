@@ -21,7 +21,7 @@ def job():
     
     # Wait until the time button "2:00pm" appears and click it
     time_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='2:00pm']"))
+        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='10:00am']"))
     )
     time_button.click()
 
@@ -75,7 +75,7 @@ def job():
     print("Ticket info step reached successfully.")
 
 # Schedule the job at a specific time (example: 12:00)
-schedule.every().day.at("12:00").do(job)
+schedule.every().day.at("08:00").do(job)
 
 while True:
     schedule.run_pending()

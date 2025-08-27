@@ -14,9 +14,6 @@ def job():
 
     # run in background without GUI
     options = Options()
-    # options.add_argument("--headless")  
-    # options.add_argument("--window-size=1920,1080")
-    # driver = webdriver.Chrome(options=options) 
     options.add_experimental_option("detach", True)  # Keep browser open
 
     driver = webdriver.Chrome(options=options)  # Selenium handles driver management
@@ -30,7 +27,7 @@ def job():
     
     # Wait until the time button "10:00am" appears and click it
     time_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='2:00pm']"))
+        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='10:00am']"))
     )
     time_button.click()
 
@@ -38,7 +35,6 @@ def job():
     plus_button = WebDriverWait(driver, 60).until(
         EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']"))
     )
-
     driver.execute_script("arguments[0].click();", plus_button)
 
     # Wait until the continue button is enabled
@@ -78,7 +74,7 @@ def job():
     ticket_info_continue.click()
 
 # Schedule job
-schedule.every().day.at("12:00").do(job)
+schedule.every().day.at("08:00").do(job)
 
 while True:
     schedule.run_pending()
