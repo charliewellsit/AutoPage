@@ -36,11 +36,10 @@ def job():
 
     # Wait until the plus button is enabled (data-disabled="false")
     plus_button = WebDriverWait(driver, 60).until(
-        EC.element_to_be_clickable(
-            (By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']")
-        )
+        EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']"))
     )
-    plus_button.click()
+
+    driver.execute_script("arguments[0].click();", plus_button)
 
     # Wait until the continue button is enabled
     continue_button = WebDriverWait(driver, 60).until(
