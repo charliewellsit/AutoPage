@@ -6,16 +6,13 @@ import schedule
 from datetime import datetime
 import time
 
-time_slots = ["10:00am", "11:00am", "12:00pm", "1:00pm", "2:00pm"]
-TICKET_URL = "https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp"
-
 def job(slot):
     today = datetime.today().day
     driver = Driver(uc=True)  
     driver.keep_alive = True
 
     # Always start from main tickets page
-    driver.get(TICKET_URL)
+    driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
 
     try:
         # Select date
@@ -69,10 +66,10 @@ def job(slot):
             EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
         ).click()
 
-        input("✅ Success! Press Enter to exit...")
+        input("Success! Press Enter to exit...")
 
     except Exception as e:
-        print(f"❌ Failed for {slot}, you can check the page.")
+        print(f"Failed for {slot}, you can check the page.")
         # Browser stays open
 
 # Schedule jobs 2 hours earlier than ticket times
