@@ -2,118 +2,86 @@ from seleniumbase import Driver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from datetime import datetime, time as dtime
 import schedule
+from datetime import datetime
 import time
 
-class TicketTime:
-    def __init__(self, ticket_str, opening_str):
-        self.ticket_str = ticket_str
-        self.opening_str = opening_str
-        self.opening_time = datetime.strptime(opening_str, "%H:%M").time()
+time_slots = ["10:00am", "11:00am", "12:00pm", "1:00pm", "2:00pm"]
+TICKET_URL = "https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp"
 
-# Define ticket times and their opening times
-TICKET_TIMES = [
-    TicketTime("10:00am", "08:00"),
-    TicketTime("11:00am", "09:00"),
-    TicketTime("12:00pm", "10:00"),
-    TicketTime("1:00pm", "11:00"),
-    TicketTime("2:00pm", "12:00")
-]
-
-def fill_personal_info(driver):
-    first_name_input = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.ID, "firstName"))
-    )
-    first_name_input.send_keys("Juntao")
-
-    last_name_input = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "lastName"))
-    )
-    last_name_input.send_keys("Yu")
-
-    email_input = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "email"))
-    )
-    email_input.send_keys("yujuntao1993@gmail.com")
-
-    mobile_input = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "mobile"))
-    )
-    mobile_input.send_keys("0474836509")
-
-    ticket_info_continue = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
-    )
-    ticket_info_continue.click()
-
-def attempt_purchase(ticket_time_str):
-    driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
+def job(slot):
     today = datetime.today().day
+    driver = Driver(uc=True)  
+    driver.keep_alive = True
+
+    # Always start from main tickets page
+    driver.get(TICKET_URL)
 
     try:
-        # Select today's date
+        # Select date
         date_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{today}')]"))
         )
         date_button.click()
 
-        # Select ticket time
+        # Select time
         time_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, f"//button[normalize-space(text())='{ticket_time_str}']"))
+            EC.element_to_be_clickable((By.XPATH, f"//button[normalize-space(text())='{slot}']"))
         )
         time_button.click()
 
-        # Click plus button
-        plus_button = WebDriverWait(driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']"))
+        # Plus button
+        plus_button = WebDriverWait(driver, 60).until(
+            EC.element_to_be_clickable(
+                (By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']")
+            )
         )
         driver.execute_script("arguments[0].click();", plus_button)
 
-        # Click continue button
-        continue_button = WebDriverWait(driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']"))
+        # Continue
+        continue_button = WebDriverWait(driver, 60).until(
+            EC.presence_of_element_located(
+                (By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']")
+            )
         )
         continue_button.click()
 
-        # Handle CAPTCHA if present
         driver.uc_gui_click_captcha()
 
-        # Fill personal info
-        fill_personal_info(driver)
-        return True
+        # Fill info
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.ID, "firstName"))
+        ).send_keys("Juntao")
+
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "lastName"))
+        ).send_keys("Yu")
+
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "email"))
+        ).send_keys("yujuntao1993@gmail.com")
+
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "mobile"))
+        ).send_keys("0474836509")
+
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
+        ).click()
+
+        input("✅ Success! Press Enter to exit...")
 
     except Exception as e:
-        print(f"Failed to purchase ticket for {ticket_time_str}: {e}")
-        return False
+        print(f"❌ Failed for {slot}, you can check the page.")
+        # Browser stays open
 
-def job():
-    print("Checking ticket availability...")
-    now = datetime.now().time()
+# Schedule jobs 2 hours earlier than ticket times
+schedule.every().day.at("08:00").do(job, "10:00am")
+schedule.every().day.at("09:00").do(job, "11:00am")
+schedule.every().day.at("10:00").do(job, "12:00pm")
+schedule.every().day.at("11:00").do(job, "1:00pm")
+schedule.every().day.at("12:00").do(job, "2:00pm")
 
-    for ticket in TICKET_TIMES:
-        # Skip tickets that haven't opened yet
-        if now < ticket.opening_time:
-            continue
-
-        print(f"Attempting ticket for {ticket.ticket_str}")
-        success = attempt_purchase(ticket.ticket_str)
-        if success:
-            print(f"Successfully purchased ticket for {ticket.ticket_str}")
-            # Keep the browser open; just stop script logic
-            return
-
-    print("No tickets purchased this round. Waiting for next scheduled run.")
-
-# Initialize driver once and keep open
-driver = Driver(uc=True)
-driver.keep_alive = True
-
-# Schedule jobs for all opening times
-for ticket in TICKET_TIMES:
-    schedule.every().day.at(ticket.opening_str).do(job)
-
-print("Ticket automation script running...")
 while True:
     schedule.run_pending()
     time.sleep(1)
