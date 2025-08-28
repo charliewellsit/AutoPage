@@ -8,6 +8,8 @@ today = datetime.today().day
 
 # Use SeleniumBase with undetected-chromedriver
 driver = Driver(uc=True)  
+driver.keep_alive = True  # Keep browser open
+
 driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
 
 # Wait until the button with today’s number appears and click it
@@ -30,13 +32,13 @@ plus_button = WebDriverWait(driver, 60).until(
 )
 plus_button.click()
 
-# Wait until the continue button is enabled and click
-continue_button = WebDriverWait(driver, 60).until(
-    EC.presence_of_element_located(
-        (By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']")
+# More reliable plus button click using JavaScript
+plus_button = WebDriverWait(driver, 60).until(
+    EC.element_to_be_clickable(
+        (By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']")
     )
 )
-continue_button.click()
+driver.execute_script("arguments[0].click();", plus_button)
 
 # 🔐 Handle Cloudflare challenge right here
 driver.uc_gui_click_captcha()
@@ -67,3 +69,6 @@ ticket_info_continue = WebDriverWait(driver, 10).until(
     EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
 )
 ticket_info_continue.click()
+
+# Keep browser open until user input
+input("Press Enter to exit and close browser...")

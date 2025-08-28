@@ -11,6 +11,7 @@ def job():
 
     # Use SeleniumBase with undetected-chromedriver
     driver = Driver(uc=True)  
+    driver.keep_alive = True  # Keep browser open
     driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
 
     # Wait until the button with today’s number appears and click it
@@ -21,17 +22,17 @@ def job():
     
     # Wait until the time button "2:00pm" appears and click it
     time_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='10:00am']"))
+        EC.element_to_be_clickable((By.XPATH, "//button[normalize-space(text())='1:00pm']"))
     )
     time_button.click()
 
-    # Wait until the plus button is enabled and click
+    # More reliable plus button click using JavaScript
     plus_button = WebDriverWait(driver, 60).until(
         EC.element_to_be_clickable(
             (By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']")
         )
     )
-    plus_button.click()
+    driver.execute_script("arguments[0].click();", plus_button)
 
     # Wait until the continue button is enabled and click
     continue_button = WebDriverWait(driver, 60).until(
@@ -71,11 +72,11 @@ def job():
     )
     ticket_info_continue.click()
 
-    # ✅ Script stops here (next steps depend on payment/extra forms)
-    print("Ticket info step reached successfully.")
+    # Keep browser open until user input
+    input("Press Enter to exit and close browser...")
 
 # Schedule the job at a specific time (example: 12:00)
-schedule.every().day.at("08:00").do(job)
+schedule.every().day.at("11:00").do(job)
 
 while True:
     schedule.run_pending()
