@@ -6,6 +6,20 @@ import schedule
 from datetime import datetime
 import time
 
+# =========================
+# --- User Configurable ---
+# =========================
+First_Name = "Juntao"
+Last_Name = "Yu"
+Email = "yujuntao1993@gmail.com"
+Mobile = "0474836509"
+
+Domestic_or_International = "International"  # Options: "Domestic" or "International"
+Postgrad_or_Undergrad = "Postgraduate"       # Options: "Postgraduate" or "Undergraduate"
+
+# =========================
+# --- Booking Function ---
+# =========================
 def job(slot):
     today = datetime.today().day
     driver = Driver(uc=True)  
@@ -15,19 +29,19 @@ def job(slot):
     driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
 
     try:
-        # Select date
+        # --- Select date ---
         date_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{today}')]"))
         )
         date_button.click()
 
-        # Select time
+        # --- Select time ---
         time_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, f"//button[normalize-space(text())='{slot}']"))
         )
         time_button.click()
 
-        # Plus button
+        # --- Plus button ---
         plus_button = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable(
                 (By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']")
@@ -35,7 +49,7 @@ def job(slot):
         )
         driver.execute_script("arguments[0].click();", plus_button)
 
-        # Continue
+        # --- Continue ---
         continue_button = WebDriverWait(driver, 60).until(
             EC.presence_of_element_located(
                 (By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']")
@@ -45,51 +59,59 @@ def job(slot):
 
         driver.uc_gui_click_captcha()
 
-        # Fill info
+        # --- Fill info ---
         WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.ID, "firstName"))
-        ).send_keys("Juntao")
+        ).send_keys(First_Name)
 
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "lastName"))
-        ).send_keys("Yu")
+        ).send_keys(Last_Name)
 
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "email"))
-        ).send_keys("yujuntao1993@gmail.com")
+        ).send_keys(Email)
 
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "mobile"))
-        ).send_keys("0474836509")
+        ).send_keys(Mobile)
 
-        # After filling in all fields, wait for 2 seconds for cloudflare to check.
+        # Wait for Cloudflare check
         time.sleep(2)
 
         WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
         ).click()
 
-        # --- First dropdown: Domestic/International ---
+        # --- Select Domestic/International ---
         dropdown1 = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//label/span[contains(text(),'domestic or international')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']"))
+            EC.element_to_be_clickable(
+                (By.XPATH, "//label/span[contains(text(),'domestic or international')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")
+            )
         )
         dropdown1.click()
 
-        international_option = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[@role='option' and normalize-space()='International']"))
+        option1 = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable(
+                (By.XPATH, f"//div[@role='option' and normalize-space()='{Domestic_or_International}']")
+            )
         )
-        international_option.click()
+        option1.click()
 
-        # --- Second dropdown: Postgraduate/Undergraduate ---
+        # --- Select Postgraduate/Undergraduate ---
         dropdown2 = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//label/span[contains(text(),'postgraduate or undergraduate')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']"))
+            EC.element_to_be_clickable(
+                (By.XPATH, "//label/span[contains(text(),'postgraduate or undergraduate')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")
+            )
         )
         dropdown2.click()
 
-        postgrad_option = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[@role='option' and normalize-space()='Postgraduate']"))
+        option2 = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable(
+                (By.XPATH, f"//div[@role='option' and normalize-space()='{Postgrad_or_Undergrad}']")
+            )
         )
-        postgrad_option.click()
+        option2.click()
 
         continue_btn = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='ticket-info-submit']"))
@@ -107,16 +129,17 @@ def job(slot):
             print(f"Booking for {slot} succeeded! Closing browser and stopping scheduler.")
             driver.quit()
             schedule.clear()   # stop all jobs
-            return             # exit job()
+            return
         except:
             print(f"Booking flow for {slot} did not reach success page, will keep scheduler running...")
-
 
     except Exception as e:
         print(f"Failed for {slot}, you can check the page.")
         # Browser stays open
 
-# Schedule jobs 2 hours earlier than ticket times
+# =========================
+# --- Scheduler ---
+# =========================
 schedule.every().day.at("08:00").do(job, "10:00am")
 schedule.every().day.at("09:00").do(job, "11:00am")
 schedule.every().day.at("10:00").do(job, "12:00pm")
