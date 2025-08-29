@@ -96,6 +96,22 @@ def job(slot):
         )
         continue_btn.click()
 
+        # --- SUCCESS CHECK ---
+        try:
+            WebDriverWait(driver, 20).until(
+                EC.any_of(
+                    EC.url_contains("complete"),
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'View ticket')]"))
+                )
+            )
+            print(f"Booking for {slot} succeeded! Closing browser and stopping scheduler.")
+            driver.quit()
+            schedule.clear()   # stop all jobs
+            return             # exit job()
+        except:
+            print(f"Booking flow for {slot} did not reach success page, will keep scheduler running...")
+
+
     except Exception as e:
         print(f"Failed for {slot}, you can check the page.")
         # Browser stays open
