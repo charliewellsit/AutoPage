@@ -41,7 +41,7 @@ def job(slot):
                 (By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']")
             )
         )
-        continue_button.click()
+        driver.execute_script("arguments[0].click();", continue_button)
 
         driver.uc_gui_click_captcha()
 
@@ -62,11 +62,39 @@ def job(slot):
             EC.presence_of_element_located((By.ID, "mobile"))
         ).send_keys("0474836509")
 
+        # After filling in all fields, wait for 2 seconds for cloudflare to check.
+        time.sleep(2)
+
         WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
         ).click()
 
-        input("Success! Press Enter to exit...")
+        # --- First dropdown: Domestic/International ---
+        dropdown1 = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//label/span[contains(text(),'domestic or international')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']"))
+        )
+        dropdown1.click()
+
+        international_option = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@role='option' and normalize-space()='International']"))
+        )
+        international_option.click()
+
+        # --- Second dropdown: Postgraduate/Undergraduate ---
+        dropdown2 = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//label/span[contains(text(),'postgraduate or undergraduate')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']"))
+        )
+        dropdown2.click()
+
+        postgrad_option = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@role='option' and normalize-space()='Postgraduate']"))
+        )
+        postgrad_option.click()
+
+        continue_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='ticket-info-submit']"))
+        )
+        continue_btn.click()
 
     except Exception as e:
         print(f"Failed for {slot}, you can check the page.")
