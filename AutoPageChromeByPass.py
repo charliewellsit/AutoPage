@@ -30,13 +30,13 @@ def job(slot):
 
     try:
         # --- Select date ---
-        date_button = WebDriverWait(driver, 10).until(
+        date_button = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{today}')]"))
         )
         date_button.click()
 
         # --- Select time ---
-        time_button = WebDriverWait(driver, 10).until(
+        time_button = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable((By.XPATH, f"//button[normalize-space(text())='{slot}']"))
         )
         time_button.click()
@@ -60,38 +60,38 @@ def job(slot):
         driver.uc_gui_click_captcha()
 
         # --- Fill info ---
-        WebDriverWait(driver, 20).until(
+        WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.ID, "firstName"))
         ).send_keys(First_Name)
 
-        WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.ID, "lastName"))
         ).send_keys(Last_Name)
 
-        WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.ID, "email"))
         ).send_keys(Email)
 
-        WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.ID, "mobile"))
         ).send_keys(Mobile)
 
         # Wait for Cloudflare check
         time.sleep(2)
 
-        WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))
         ).click()
 
         # --- Select Domestic/International ---
-        dropdown1 = WebDriverWait(driver, 10).until(
+        dropdown1 = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable(
                 (By.XPATH, "//label/span[contains(text(),'domestic or international')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")
             )
         )
         dropdown1.click()
 
-        option1 = WebDriverWait(driver, 10).until(
+        option1 = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable(
                 (By.XPATH, f"//div[@role='option' and normalize-space()='{Domestic_or_International}']")
             )
@@ -99,28 +99,28 @@ def job(slot):
         option1.click()
 
         # --- Select Postgraduate/Undergraduate ---
-        dropdown2 = WebDriverWait(driver, 10).until(
+        dropdown2 = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable(
                 (By.XPATH, "//label/span[contains(text(),'postgraduate or undergraduate')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")
             )
         )
         dropdown2.click()
 
-        option2 = WebDriverWait(driver, 10).until(
+        option2 = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable(
                 (By.XPATH, f"//div[@role='option' and normalize-space()='{Postgrad_or_Undergrad}']")
             )
         )
         option2.click()
 
-        continue_btn = WebDriverWait(driver, 10).until(
+        continue_btn = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='ticket-info-submit']"))
         )
         continue_btn.click()
 
         # --- SUCCESS CHECK ---
         try:
-            WebDriverWait(driver, 20).until(
+            WebDriverWait(driver, 60).until(
                 EC.any_of(
                     EC.url_contains("complete"),
                     EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'View ticket')]"))
