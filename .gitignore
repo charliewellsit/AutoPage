@@ -2,3 +2,4 @@ test.py
 .venv/
 downloaded_files/
 .vscode/
+DS_Store
