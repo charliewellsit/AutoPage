@@ -26,7 +26,7 @@ def job(slot):
     driver.keep_alive = True
 
     # Always start from main tickets page
-    driver.get("https://events.humanitix.com/food-hub-2025-semester-2/tickets?c=usulp")
+    driver.get("https://events.humanitix.com/food-hub-2026-semester-1/tickets?c=app")
 
     try:
         # --- Select date ---
@@ -141,9 +141,13 @@ def job(slot):
 # --- Scheduler ---
 # =========================
 schedule.every().day.at("08:00").do(job, "10:00am")
+schedule.every().day.at("08:30").do(job, "10:30am") 
 schedule.every().day.at("09:00").do(job, "11:00am")
+schedule.every().day.at("09:30").do(job, "11:30am")  
 schedule.every().day.at("10:00").do(job, "12:00pm")
+schedule.every().day.at("10:30").do(job, "12:30pm")  
 schedule.every().day.at("11:00").do(job, "1:00pm")
+schedule.every().day.at("11:30").do(job, "1:30pm")   
 schedule.every().day.at("12:00").do(job, "2:00pm")
 
 while True:
