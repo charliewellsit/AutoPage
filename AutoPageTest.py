@@ -2,7 +2,7 @@ from seleniumbase import Driver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import schedule
+import schedule # 虽然测试版不用，但保留以维持结构一致
 from datetime import datetime
 import time
 
@@ -14,8 +14,8 @@ Last_Name = "Yu"
 Email = "yujuntao1993@gmail.com"
 Mobile = "0474836509"
 
-Domestic_or_International = "International"  # Options: "Domestic" or "International"
-Postgrad_or_Undergrad = "Postgraduate"       # Options: "Postgraduate" or "Undergraduate"
+Domestic_or_International = "International"
+Postgrad_or_Undergrad = "Postgraduate"
 
 # =========================
 # --- Booking Function ---
@@ -25,7 +25,6 @@ def job(slot):
     driver = Driver(uc=True)  
     driver.keep_alive = True
 
-    # Always start from main tickets page
     driver.get("https://events.humanitix.com/food-hub-2026-semester-1/tickets?c=app")
 
     try:
@@ -36,6 +35,7 @@ def job(slot):
         date_button.click()
 
         # --- Select time ---
+        # 这里的 slot 会直接使用下面调用时传入的参数
         time_button = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable((By.XPATH, f"//button[normalize-space(text())='{slot}']"))
         )
@@ -76,7 +76,6 @@ def job(slot):
             EC.presence_of_element_located((By.ID, "mobile"))
         ).send_keys(Mobile)
 
-        # Wait for Cloudflare check
         time.sleep(2)
 
         WebDriverWait(driver, 60).until(
@@ -126,31 +125,22 @@ def job(slot):
                     EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'View ticket')]"))
                 )
             )
-            print(f"Booking for {slot} succeeded! Closing browser and stopping scheduler.")
-            driver.quit()
-            schedule.clear()   # stop all jobs
+            print(f"Booking for {slot} succeeded!")
+            # driver.quit() # 测试时可以注释掉这一行，方便查看结果
             return
         except:
-            print(f"Booking flow for {slot} did not reach success page, will keep scheduler running...")
+            print(f"Booking flow for {slot} did not reach success page.")
 
     except Exception as e:
-        print(f"Failed for {slot}, you can check the page.")
-        # Browser stays open
+        print(f"Failed for {slot}. Error: {e}")
 
-# =========================
-# --- Scheduler ---
-# =========================
-schedule.every().day.at("08:00").do(job, "10:00am")
-schedule.every().day.at("08:30").do(job, "10:30am") 
-schedule.every().day.at("09:00").do(job, "11:00am")
-schedule.every().day.at("09:30").do(job, "11:30am")  
-schedule.every().day.at("10:00").do(job, "12:00pm")
-schedule.every().day.at("10:30").do(job, "12:30pm")  
-schedule.every().day.at("11:00").do(job, "1:00pm")
-schedule.every().day.at("11:30").do(job, "1:30pm")   
-schedule.every().day.at("12:00").do(job, "2:00pm")
-schedule.every().day.at("12:30").do(job, "2:30pm")
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+# ==================================
+# --- Test Execution (Immediate) ---
+# ==================================
+if __name__ == "__main__":
+    # 在这里输入你想测试的那个时间段文字
+    # 比如你想测试半小时的，就改写成 "10:30am"
+    test_slot = "2:00pm" 
+    
+    print(f"Starting test for slot: {test_slot}")
+    job(test_slot)
