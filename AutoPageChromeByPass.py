@@ -21,17 +21,16 @@ Postgrad_or_Undergrad = "Postgraduate"
 # --- Booking Function ---
 # =========================
 def job(trigger_time, slot):
-    """
-    trigger_time: 抢票启动的精确秒数 (如 "10:00:00")
-    slot: 预选的时间段 (如 "12:00pm")
-    """
     today = datetime.today().day
     driver = Driver(uc=True)  
     driver.keep_alive = True
 
-    # --- 阶段 1：预热 (提前进入并选好时间) ---
+    # --- 阶段 1：预热 ---
     print(f"[{datetime.now()}] 正在预加载并锁定时间段: {slot}")
     driver.get("https://events.humanitix.com/food-hub-2026-semester-1/tickets?c=app")
+    
+    # 【新增】页面加载后立即缩放至 50%
+    driver.execute_script("document.body.style.zoom='50%'")
     
     try:
         # 预选日期
@@ -44,13 +43,16 @@ def job(trigger_time, slot):
         while True:
             if datetime.now().strftime("%H:%M:%S") >= trigger_time:
                 break
-            time.sleep(0.05) # 高频检查
+            time.sleep(0.05) 
 
-        # --- 阶段 3：冲刺 (准点刷新并直接点加号) ---
+        # --- 阶段 3：冲刺 ---
         print(f"[{datetime.now()}] 准点！正在刷新页面激活加号...")
         driver.refresh()
+        
+        # 【新增】刷新后缩放通常会失效，需要重新执行一次
+        driver.execute_script("document.body.style.zoom='50%'")
 
-        # 直接等待并点击加号 (跳过选日期和时间步骤)
+        # 直接等待并点击加号
         plus_button = WebDriverWait(driver, 15).until(
             EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']"))
         )
