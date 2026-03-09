@@ -22,7 +22,7 @@ Postgrad_or_Undergrad = "Postgraduate"
 # =========================
 def job(trigger_time, slot):
     today = datetime.today().day
-    driver = Driver(uc=True)  
+    driver = Driver(uc=True, user_data_dir="profile2")
     driver.keep_alive = True
 
     # --- 阶段 1：预热 ---
