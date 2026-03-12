@@ -5,15 +5,14 @@ from selenium.webdriver.support import expected_conditions as EC
 import schedule
 from datetime import datetime
 import time
-import threading
+import multiprocessing  # 【修改1】引入多进程模块替代 threading
 
 # =========================
 # --- 用户信息配置列表 ---
 # =========================
-# 在这里管理所有需要抢票的账号，加几个人就写几个字典
 USERS = [
     {
-        "profile": "profile_juntao", # 独立的浏览器缓存文件夹名
+        "profile": "profile_juntao", 
         "First_Name": "Juntao",
         "Last_Name": "Yu",
         "Email": "yujuntao1993@gmail.com",
@@ -22,7 +21,7 @@ USERS = [
         "Postgrad_or_Undergrad": "Postgraduate"
     },
     {
-        "profile": "profile_ying",   # 独立的浏览器缓存文件夹名
+        "profile": "profile_ying",   
         "First_Name": "YING",
         "Last_Name": "QI",
         "Email": "brittanysimon71@gmail.com",
@@ -37,7 +36,6 @@ USERS = [
 # =========================
 def execute_booking(user, trigger_time, slot):
     today = datetime.today().day
-    # 动态分配独立的 profile，防止两个浏览器抢夺同一个缓存导致崩溃
     driver = Driver(uc=True, user_data_dir=user["profile"])  
     driver.keep_alive = True
 
@@ -52,13 +50,11 @@ def execute_booking(user, trigger_time, slot):
         WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//button[normalize-space(text())='{slot}']"))).click()
         print(f"[{name}] 时间已锁定，等待准点 {trigger_time} 刷新...")
 
-        # --- 等待准点 ---
         while True:
             if datetime.now().strftime("%H:%M:%S") >= trigger_time:
                 break
             time.sleep(0.05) 
 
-        # --- 冲刺 ---
         print(f"[{datetime.now()}] [{name}] 准点！正在刷新页面激活加号...")
         driver.refresh()
         
@@ -72,7 +68,6 @@ def execute_booking(user, trigger_time, slot):
         )
         driver.execute_script("arguments[0].click();", continue_button)
 
-        # 填写当前线程对应的用户信息
         driver.uc_gui_click_captcha()
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "firstName"))).send_keys(user["First_Name"])
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "lastName"))).send_keys(user["Last_Name"])
@@ -97,41 +92,41 @@ def execute_booking(user, trigger_time, slot):
         print(f"[{name}] 流程出错: {e}")
 
 # =========================
-# --- 线程管理器 ---
+# --- 进程管理器 ---
 # =========================
 def job_for_all_users(trigger_time, slot):
-    threads = []
+    processes = []
     for user in USERS:
-        # 为每个人分配一个独立的虚拟操作员（线程）
-        t = threading.Thread(target=execute_booking, args=(user, trigger_time, slot))
-        threads.append(t)
-        t.start()
+        # 【修改2】使用 multiprocessing.Process 替代 threading.Thread
+        p = multiprocessing.Process(target=execute_booking, args=(user, trigger_time, slot))
+        processes.append(p)
+        p.start()
         
-        # 【重要安全机制】错开 1.5 秒启动浏览器。
-        # SeleniumBase 启动时会修改底层文件，如果两个并发线程在同一毫秒修改文件会报错。
-        # 这个错开是在“预加载阶段”（如 07:59:00 和 07:59:01），绝对不会影响 08:00:00 的同时抢票冲刺。
-        time.sleep(1.5) 
+        # 将启动间隔拉长到 2 秒，给底层进程足够的初始化时间，避免打架
+        time.sleep(2) 
 
-    # 等待所有人的操作结束
-    for t in threads:
-        t.join()
+    for p in processes:
+        p.join()
 
 # =========================
-# --- 定时器 ---
+# --- 定时器与主程序入口 ---
 # =========================
-schedule.every().day.at("07:59").do(job_for_all_users, "08:00:00", "10:00am")
-schedule.every().day.at("08:29").do(job_for_all_users, "08:30:00", "10:30am")
-schedule.every().day.at("08:59").do(job_for_all_users, "09:00:00", "11:00am")
-schedule.every().day.at("09:29").do(job_for_all_users, "09:30:00", "11:30am")
-schedule.every().day.at("09:59").do(job_for_all_users, "10:00:00", "12:00pm")
-schedule.every().day.at("10:29").do(job_for_all_users, "10:30:00", "12:30pm")
-schedule.every().day.at("10:59").do(job_for_all_users, "11:00:00", "1:00pm")
-schedule.every().day.at("11:29").do(job_for_all_users, "11:30:00", "1:30pm")
-schedule.every().day.at("11:59").do(job_for_all_users, "12:00:00", "2:00pm")
-schedule.every().day.at("12:29").do(job_for_all_users, "12:30:00", "2:30pm")
+# 【修改3】必须加上 __name__ == "__main__" 的判断，否则 Mac 系统会无限重启子进程报错
+if __name__ == "__main__":
+    # 为了方便你现在立刻测试，你可以把下面的时间改成距离现在最近的 1 分钟后
+    schedule.every().day.at("07:59").do(job_for_all_users, "08:00:00", "10:00am")
+    schedule.every().day.at("08:29").do(job_for_all_users, "08:30:00", "10:30am")
+    schedule.every().day.at("08:59").do(job_for_all_users, "09:00:00", "11:00am")
+    schedule.every().day.at("09:29").do(job_for_all_users, "09:30:00", "11:30am")
+    schedule.every().day.at("09:59").do(job_for_all_users, "10:00:00", "12:00pm")
+    schedule.every().day.at("10:29").do(job_for_all_users, "10:30:00", "12:30pm")
+    schedule.every().day.at("10:59").do(job_for_all_users, "11:00:00", "1:00pm")
+    schedule.every().day.at("11:29").do(job_for_all_users, "11:30:00", "1:30pm")
+    schedule.every().day.at("11:59").do(job_for_all_users, "12:00:00", "2:00pm")
+    schedule.every().day.at("12:29").do(job_for_all_users, "12:30:00", "2:30pm")
 
-print("双账号抢票程序已启动，等待定时任务触发...")
+    print("多进程双账号抢票程序已启动，等待定时任务触发...")
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
