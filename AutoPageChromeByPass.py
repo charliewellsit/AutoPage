@@ -48,9 +48,6 @@ def job(trigger_time, slot):
         # --- 阶段 3：冲刺 ---
         print(f"[{datetime.now()}] 准点！正在刷新页面激活加号...")
         driver.refresh()
-        
-        # 【新增】刷新后缩放通常会失效，需要重新执行一次
-        # driver.execute_script("document.body.style.zoom='50%'")
 
         # 直接等待并点击加号
         plus_button = WebDriverWait(driver, 15).until(
@@ -63,6 +60,9 @@ def job(trigger_time, slot):
             EC.presence_of_element_located((By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']"))
         )
         driver.execute_script("arguments[0].click();", continue_button)
+
+        # 【新增】刷新后缩放通常会失效，需要重新执行一次
+        driver.execute_script("document.body.style.zoom='50%'")
 
         # --- 后续信息填充 (保持原有结构) ---
         driver.uc_gui_click_captcha()
