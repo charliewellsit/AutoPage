@@ -36,6 +36,30 @@ BOOKING_SCHEDULES = [
 ]
 
 
+def select_dropdown_by_label(driver, label_hint, value):
+    # 最后一题的完整文案可能有大小写或措辞差异，所以这里只匹配稳定的关键词。
+    dropdown = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//label/span[contains("
+                "translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), "
+                f"'{label_hint.lower()}')]"
+                "/ancestor::div[contains(@class,'Select')]//div[@role='combobox']",
+            )
+        )
+    )
+    dropdown.click()
+    WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                f"//div[@role='option' and normalize-space()='{value}']",
+            )
+        )
+    ).click()
+
+
 def wake_display_now():
     # 如果显示器已经灭了，这里先尝试点亮它。
     try:
@@ -126,25 +150,9 @@ def job(trigger_time, slot):
         for label, val in [
             ("domestic or international", Domestic_or_International),
             ("postgraduate or undergraduate", Postgrad_or_Undergrad),
-            ("Are you USU member?", USU_Member),
+            ("usu member", USU_Member),
         ]:
-            dropdown = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(
-                    (
-                        By.XPATH,
-                        f"//label/span[contains(text(),'{label}')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']",
-                    )
-                )
-            )
-            dropdown.click()
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(
-                    (
-                        By.XPATH,
-                        f"//div[@role='option' and normalize-space()='{val}']",
-                    )
-                )
-            ).click()
+            select_dropdown_by_label(driver, label, val)
 
         # 提交问卷后，进入成功页或出现 View ticket 按钮都算抢票成功。
         WebDriverWait(driver, 10).until(
