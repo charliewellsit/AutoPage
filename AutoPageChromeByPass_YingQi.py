@@ -11,6 +11,7 @@ import time
 
 
 BOOKING_URL = "https://events.humanitix.com/food-hub-2026-semester-1b/tickets"
+ERROR_HOLD_SECONDS = 10 * 60
 
 # 这些值会直接填入结账页表单；只抢 Ying 这一张票时改这里即可。
 First_Name = "YING"
@@ -166,9 +167,11 @@ def job(trigger_time, slot):
         )
         print(f"恭喜！{slot} 预订成功。")
         schedule.clear()
+        return True
 
     except Exception as e:
         print(f"流程出错: {e}")
+        return False
 
 
 def register_daily_jobs():
@@ -187,7 +190,10 @@ if __name__ == "__main__":
 
     # 双人脚本会用 --once 启动单人脚本，这样每个单人脚本都还是走它原本那套成功流程。
     if args.once:
-        job(args.once[0], args.once[1])
+        success = job(args.once[0], args.once[1])
+        if not success:
+            print(f"脚本将在错误状态下保持 {ERROR_HOLD_SECONDS // 60} 分钟，方便查看页面和报错。")
+            time.sleep(ERROR_HOLD_SECONDS)
     else:
         register_daily_jobs()
         while True:

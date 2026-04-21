@@ -1,4 +1,5 @@
 import os
+import json
 import schedule
 import subprocess
 import sys
@@ -41,20 +42,25 @@ def keep_display_awake_while_running():
         print(f"无法启动 caffeinate: {e}")
 
 
-def launch_single_script(script_path, trigger_time, slot):
-    # 用全新的 Python 进程启动单人脚本，行为尽量贴近你手动在第二个 terminal 里再跑一份脚本。
-    return subprocess.Popen(
-        [sys.executable, script_path, "--once", trigger_time, slot],
-        cwd=BASE_DIR,
+def launch_single_script_in_terminal(script_path, trigger_time, slot):
+    # 这里直接打开新的 Terminal 会话来跑单人脚本，尽量贴近你手动开两个 terminal 的成功方式。
+    command = (
+        f"cd {BASE_DIR!r} && "
+        f"{sys.executable!r} {script_path!r} --once {trigger_time!r} {slot!r}; "
+        "echo ''; "
+        "echo 'Single booking process finished. Terminal will stay open.'; "
+        "exec zsh"
     )
+    applescript = f'tell application "Terminal" to do script {json.dumps(command)}'
+    return subprocess.Popen(["osascript", "-e", applescript], cwd=BASE_DIR)
 
 
 def run_both(trigger_time, slot):
     print(f"[{datetime.now()}] 正在启动两个独立抢票进程: {slot}")
 
-    # 双人脚本本身不再直接操作浏览器，只负责把两个已经验证成功的单人脚本同时拉起来。
-    p1 = launch_single_script(JUNTAO_SCRIPT, trigger_time, slot)
-    p2 = launch_single_script(YINGQI_SCRIPT, trigger_time, slot)
+    # 每个用户都在独立 Terminal 会话中运行，这样报错不会一闪而过，也更接近你手动验证成功的流程。
+    p1 = launch_single_script_in_terminal(JUNTAO_SCRIPT, trigger_time, slot)
+    p2 = launch_single_script_in_terminal(YINGQI_SCRIPT, trigger_time, slot)
 
     print(
         f"[{datetime.now()}] 已启动 Juntao 进程 PID={p1.pid}，"
