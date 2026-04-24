@@ -46,10 +46,7 @@ def launch_single_script_in_terminal(script_path, trigger_time, slot):
     # 这里直接打开新的 Terminal 会话来跑单人脚本，尽量贴近你手动开两个 terminal 的成功方式。
     command = (
         f"cd {BASE_DIR!r} && "
-        f"{sys.executable!r} {script_path!r} --once {trigger_time!r} {slot!r}; "
-        "echo ''; "
-        "echo 'Single booking process finished. Terminal will stay open.'; "
-        "exec zsh"
+        f"{sys.executable!r} {script_path!r} --once {trigger_time!r} {slot!r}"
     )
     applescript = f'tell application "Terminal" to do script {json.dumps(command)}'
     return subprocess.Popen(["osascript", "-e", applescript], cwd=BASE_DIR)
