@@ -20,6 +20,9 @@ Mobile = "0460737966"
 Domestic_or_International = "International"
 Postgrad_or_Undergrad = "Postgraduate"
 USU_Member = "No"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROFILE_DIR = os.path.join(BASE_DIR, ".browser_profiles", "yingqi")
+PROFILE_DIR_ENV = "AUTOPAGE_PROFILE_DIR"
 
 
 def wake_display_now():
@@ -37,6 +40,14 @@ def keep_display_awake_while_running():
         return None
 
 
+def create_driver():
+    profile_dir = os.environ.get(PROFILE_DIR_ENV)
+    if profile_dir:
+        os.makedirs(profile_dir, exist_ok=True)
+        return Driver(uc=True, user_data_dir=profile_dir)
+    return Driver(uc=True)
+
+
 def select_time_button(driver, slot):
     def find_time_button(current_driver):
         for button in current_driver.find_elements(By.CSS_SELECTOR, "button.dropdown-pill.available"):
@@ -47,11 +58,18 @@ def select_time_button(driver, slot):
     time_button = WebDriverWait(driver, 20).until(find_time_button)
     ActionChains(driver).move_to_element(time_button).pause(0.1).click().perform()
 
+
+def select_date_button(driver, day):
+    date_button = WebDriverWait(driver, 20).until(
+        EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{day}')]"))
+    )
+    driver.execute_script("arguments[0].click();", date_button)
+
 # =========================
 # --- Booking Function ---
 def job(trigger_time, slot):
     today = datetime.today().day
-    driver = Driver(uc=True)  
+    driver = create_driver()  
     driver.keep_alive = True
 
     # --- 阶段 1：预热 ---
@@ -63,7 +81,7 @@ def job(trigger_time, slot):
     
     try:
         # 预选日期
-        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{today}')]"))).click()
+        select_date_button(driver, today)
         # 预选时间点
         select_time_button(driver, slot)
         print("时间已锁定，等待准点刷新...")
@@ -104,7 +122,7 @@ def job(trigger_time, slot):
         WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))).click()
 
         # 下拉框
-        for label, val in [("domestic or international", Domestic_or_International), ("postgraduate or undergraduate", Postgrad_or_Undergrad), ("usu member", USU_Member)]:
+        for label, val in [("domestic or international", Domestic_or_International), ("postgraduate or undergraduate", Postgrad_or_Undergrad), ("USU member", USU_Member)]:
             dropdown = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, f"//label/span[contains(text(),'{label}')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")))
             dropdown.click()
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, f"//div[@role='option' and normalize-space()='{val}']"))).click()
