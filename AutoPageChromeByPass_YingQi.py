@@ -23,6 +23,7 @@ USU_Member = "No"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROFILE_DIR = os.path.join(BASE_DIR, ".browser_profiles", "yingqi")
 PROFILE_DIR_ENV = "AUTOPAGE_PROFILE_DIR"
+WAIT_TIMEOUT = 60
 
 
 def wake_display_now():
@@ -55,12 +56,12 @@ def select_time_button(driver, slot):
                 return button
         return False
 
-    time_button = WebDriverWait(driver, 20).until(find_time_button)
+    time_button = WebDriverWait(driver, WAIT_TIMEOUT).until(find_time_button)
     ActionChains(driver).move_to_element(time_button).pause(0.1).click().perform()
 
 
 def select_date_button(driver, day):
-    date_button = WebDriverWait(driver, 20).until(
+    date_button = WebDriverWait(driver, WAIT_TIMEOUT).until(
         EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{day}')]"))
     )
     driver.execute_script("arguments[0].click();", date_button)
@@ -97,13 +98,13 @@ def job(trigger_time, slot):
         driver.refresh()
 
         # 直接等待并点击加号
-        plus_button = WebDriverWait(driver, 15).until(
+        plus_button = WebDriverWait(driver, WAIT_TIMEOUT).until(
             EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']"))
         )
         driver.execute_script("arguments[0].click();", plus_button)
 
         # 点击结算
-        continue_button = WebDriverWait(driver, 10).until(
+        continue_button = WebDriverWait(driver, WAIT_TIMEOUT).until(
             EC.presence_of_element_located((By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']"))
         )
         driver.execute_script("arguments[0].click();", continue_button)
@@ -113,24 +114,24 @@ def job(trigger_time, slot):
 
         # --- 后续信息填充 (保持原有结构) ---
         driver.uc_gui_click_captcha()
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "firstName"))).send_keys(First_Name)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "lastName"))).send_keys(Last_Name)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(Email)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mobile"))).send_keys(Mobile)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "firstName"))).send_keys(First_Name)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "lastName"))).send_keys(Last_Name)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(Email)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "mobile"))).send_keys(Mobile)
 
         time.sleep(1)
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))).click()
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))).click()
 
         # 下拉框
         for label, val in [("domestic or international", Domestic_or_International), ("postgraduate or undergraduate", Postgrad_or_Undergrad), ("USU member", USU_Member)]:
-            dropdown = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, f"//label/span[contains(text(),'{label}')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")))
+            dropdown = WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, f"//label/span[contains(text(),'{label}')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")))
             dropdown.click()
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, f"//div[@role='option' and normalize-space()='{val}']"))).click()
+            WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, f"//div[@role='option' and normalize-space()='{val}']"))).click()
 
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='ticket-info-submit']"))).click()
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='ticket-info-submit']"))).click()
 
         # 成功校验
-        WebDriverWait(driver, 30).until(EC.any_of(EC.url_contains("complete"), EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'View ticket')]"))))
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.any_of(EC.url_contains("complete"), EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'View ticket')]"))))
         print(f"恭喜！{slot} 预订成功。")
         schedule.clear()
         

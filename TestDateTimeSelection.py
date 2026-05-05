@@ -9,6 +9,7 @@ from datetime import datetime
 BOOKING_URL = "https://events.humanitix.com/food-hub-2026-semester-1b/tickets"
 TEST_DAY = datetime.today().day
 TEST_SLOT = "10:00am"
+WAIT_TIMEOUT = 60
 
 # 可选值: "selenium"、"javascript" 或 "actions"
 DATE_CLICK_MODE = "javascript"
@@ -65,13 +66,13 @@ def main():
     driver.execute_script("document.body.style.zoom='50%'")
 
     try:
-        date_button = WebDriverWait(driver, 20).until(
+        date_button = WebDriverWait(driver, WAIT_TIMEOUT).until(
             EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{TEST_DAY}')]"))
         )
         click_element(driver, date_button, DATE_CLICK_MODE)
         print(f"日期已选择: {TEST_DAY} 号, 点击方式: {DATE_CLICK_MODE}")
 
-        time_buttons = WebDriverWait(driver, 20).until(
+        time_buttons = WebDriverWait(driver, WAIT_TIMEOUT).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "button.dropdown-pill.available"))
         )
         time_texts = [button.text.strip() for button in time_buttons]
