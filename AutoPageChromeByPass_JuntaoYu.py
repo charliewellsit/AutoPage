@@ -1,29 +1,41 @@
 from seleniumbase import Driver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import os
 import schedule
+import shutil
 import subprocess
+import tempfile
 from datetime import datetime
 import time
 
-# =========================
-# --- User Configurable ---
-# =========================
-First_Name = "Juntao"
-Last_Name = "Yu"
-Email = "yujuntao1993@gmail.com"
-Mobile = "0474836509" 
 
-Domestic_or_International = "International"
-Postgrad_or_Undergrad = "Postgraduate"
-USU_Member = "No"
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROFILE_DIR = os.path.join(BASE_DIR, ".browser_profiles", "juntao")
-PROFILE_DIR_ENV = "AUTOPAGE_PROFILE_DIR"
+FIRST_NAME = "Juntao"
+LAST_NAME = "Yu"
+EMAIL = "yujuntao1993@gmail.com"
+MOBILE = "0474836509"
+DOMESTIC_OR_INTERNATIONAL = "International"
+POSTGRAD_OR_UNDERGRAD = "Postgraduate"
+USU_MEMBER = "No"
+SESSION_NAME = "juntao"
+
+BOOKING_URL = "https://events.humanitix.com/food-hub-2026-semester-1b/tickets"
 WAIT_TIMEOUT = 60
+HOLD_BROWSER_ON_ERROR = True
+
+BOOKING_SCHEDULES = [
+    ("07:59", "08:00:00", "10:00am"),
+    ("08:29", "08:30:00", "10:30am"),
+    ("08:59", "09:00:00", "11:00am"),
+    ("09:29", "09:30:00", "11:30am"),
+    ("09:59", "10:00:00", "12:00pm"),
+    ("10:29", "10:30:00", "12:30pm"),
+    ("10:59", "11:00:00", "1:00pm"),
+    ("11:29", "11:30:00", "1:30pm"),
+    ("11:59", "12:00:00", "2:00pm"),
+    ("12:29", "12:30:00", "2:30pm"),
+]
 
 
 def wake_display_now():
@@ -41,117 +53,288 @@ def keep_display_awake_while_running():
         return None
 
 
-def create_driver():
-    profile_dir = os.environ.get(PROFILE_DIR_ENV)
-    if profile_dir:
-        os.makedirs(profile_dir, exist_ok=True)
-        return Driver(uc=True, user_data_dir=profile_dir)
-    return Driver(uc=True)
+def create_driver(session_name):
+    session_dir = tempfile.mkdtemp(prefix=f"autopage_single_{session_name}_")
+    driver = Driver(uc=True, user_data_dir=session_dir)
+    driver.keep_alive = True
+    return driver, session_dir
 
 
-def select_time_button(driver, slot):
-    def find_time_button(current_driver):
-        for button in current_driver.find_elements(By.CSS_SELECTOR, "button.dropdown-pill.available"):
-            if button.text.strip() == slot:
-                return button
+def cleanup_driver(driver, session_dir):
+    try:
+        driver.quit()
+    except Exception:
+        pass
+    shutil.rmtree(session_dir, ignore_errors=True)
+
+
+def click_date_button_via_javascript(driver, day):
+    return driver.execute_script(
+        """
+        const target = String(arguments[0]).trim();
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const match = buttons.find((button) => {
+            const text = (button.textContent || "").replace(/\\s+/g, " ").trim();
+            return text.includes(target);
+        });
+
+        if (!match) {
+            return false;
+        }
+
+        match.scrollIntoView({ block: "center", inline: "center" });
+        match.focus();
+        match.click();
+        return true;
+        """,
+        day,
+    )
+
+
+def click_time_button_via_javascript(driver, slot):
+    return driver.execute_script(
+        """
+        const target = arguments[0];
+        const normalize = (value) => (value || "").replace(/\\s+/g, " ").trim();
+        const buttons = Array.from(document.querySelectorAll("button.dropdown-pill.available"));
+        const match = buttons.find((button) => normalize(button.textContent) === target);
+
+        if (!match) {
+            return false;
+        }
+
+        match.scrollIntoView({ block: "center", inline: "center" });
+        match.focus();
+
+        if (window.PointerEvent) {
+            ["pointerover", "pointerdown", "pointerup"].forEach((type) => {
+                match.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true }));
+            });
+        }
+
+        ["mouseover", "mousedown", "mouseup", "click"].forEach((type) => {
+            match.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+        });
+
+        return true;
+        """,
+        slot,
+    )
+
+
+def click_selector_via_javascript(driver, selector):
+    return driver.execute_script(
+        """
+        const target = document.querySelector(arguments[0]);
+        if (!target) {
+            return false;
+        }
+
+        target.scrollIntoView({ block: "center", inline: "center" });
+        if (typeof target.focus === "function") {
+            target.focus();
+        }
+
+        if (window.PointerEvent) {
+            ["pointerover", "pointerdown", "pointerup"].forEach((type) => {
+                target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true }));
+            });
+        }
+
+        ["mouseover", "mousedown", "mouseup", "click"].forEach((type) => {
+            target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+        });
+
+        return true;
+        """,
+        selector,
+    )
+
+
+def xpath_literal(value):
+    if "'" not in value:
+        return f"'{value}'"
+    if '"' not in value:
+        return f'"{value}"'
+    parts = value.split("'")
+    return "concat(" + ", \"'\", ".join(f"'{part}'" for part in parts) + ")"
+
+
+def click_dropdown_option_via_javascript(driver, label_hint, value):
+    lower = "abcdefghijklmnopqrstuvwxyz"
+    upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    label_hint_literal = xpath_literal(label_hint.lower())
+    value_literal = xpath_literal(value)
+
+    try:
+        label = WebDriverWait(driver, WAIT_TIMEOUT).until(
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    f"//label[contains(translate(normalize-space(.), '{upper}', '{lower}'), {label_hint_literal})]",
+                )
+            )
+        )
+
+        combobox_id = label.get_attribute("for")
+        if not combobox_id:
+            return False
+
+        combobox = WebDriverWait(driver, WAIT_TIMEOUT).until(
+            EC.element_to_be_clickable((By.ID, combobox_id))
+        )
+        combobox.click()
+
+        listbox_id = combobox.get_attribute("aria-controls")
+        if not listbox_id:
+            return False
+
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            lambda current_driver: (
+                current_driver.find_element(By.ID, combobox_id).get_attribute("aria-expanded") == "true"
+                or current_driver.find_element(By.ID, listbox_id).get_attribute("data-open") == "true"
+            )
+        )
+
+        option = WebDriverWait(driver, WAIT_TIMEOUT).until(
+            EC.element_to_be_clickable(
+                (
+                    By.XPATH,
+                    f"//*[@id={xpath_literal(listbox_id)}]//*[@role='option' and normalize-space(.)={value_literal}]",
+                )
+            )
+        )
+        option.click()
+
+        return WebDriverWait(driver, WAIT_TIMEOUT).until(
+            lambda current_driver: current_driver.find_element(
+                By.XPATH,
+                f"//*[@id={xpath_literal(combobox_id)}]//*[@data-testid='field-content']",
+            ).text.strip()
+            == value
+        )
+    except Exception:
         return False
 
-    time_button = WebDriverWait(driver, WAIT_TIMEOUT).until(find_time_button)
-    ActionChains(driver).move_to_element(time_button).pause(0.1).click().perform()
+
+def hold_browser_open_on_error():
+    print(f"{SESSION_NAME} 浏览器将保持打开，方便检查页面。手动停止脚本后才会关闭。")
+    try:
+        while True:
+            time.sleep(60)
+    except KeyboardInterrupt:
+        pass
 
 
-def select_date_button(driver, day):
-    date_button = WebDriverWait(driver, WAIT_TIMEOUT).until(
-        EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{day}')]"))
-    )
-    driver.execute_script("arguments[0].click();", date_button)
-
-# =========================
-# --- Booking Function ---
 def job(trigger_time, slot):
     today = datetime.today().day
-    driver = create_driver()  
-    driver.keep_alive = True
+    driver, session_dir = create_driver(SESSION_NAME)
+    should_hold_on_error = False
 
-    # --- 阶段 1：预热 ---
     print(f"[{datetime.now()}] 正在预加载并锁定时间段: {slot}")
-    driver.get("https://events.humanitix.com/food-hub-2026-semester-1b/tickets")
-    
-    # 【新增】页面加载后立即缩放至 50%
+    driver.get(BOOKING_URL)
     driver.execute_script("document.body.style.zoom='50%'")
-    
+
     try:
-        # 预选日期
-        select_date_button(driver, today)
-        # 预选时间点
-        select_time_button(driver, slot)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            lambda current_driver: current_driver.execute_script(
+                """
+                return Array.from(document.querySelectorAll("button"))
+                    .some((button) => ((button.textContent || "").replace(/\\s+/g, " ").trim()).includes(arguments[0]));
+                """,
+                str(today),
+            )
+        )
+        if not click_date_button_via_javascript(driver, today):
+            raise Exception(f"无法选择日期 {today}")
+
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            lambda current_driver: current_driver.execute_script(
+                """
+                return Array.from(document.querySelectorAll("button.dropdown-pill.available"))
+                    .some((button) => ((button.textContent || "").replace(/\\s+/g, " ").trim()) === arguments[0]);
+                """,
+                slot,
+            )
+        )
+        if not click_time_button_via_javascript(driver, slot):
+            raise Exception(f"无法选择时间 {slot}")
         print("时间已锁定，等待准点刷新...")
 
-        # --- 阶段 2：等待准点 ---
         while True:
             if datetime.now().strftime("%H:%M:%S") >= trigger_time:
                 break
-            time.sleep(0.05) 
+            time.sleep(0.05)
 
-        # --- 阶段 3：冲刺 ---
         print(f"[{datetime.now()}] 准点！正在刷新页面激活加号...")
         driver.refresh()
-
-        # 直接等待并点击加号
-        plus_button = WebDriverWait(driver, WAIT_TIMEOUT).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'plus') and @data-disabled='false']"))
-        )
-        driver.execute_script("arguments[0].click();", plus_button)
-
-        # 点击结算
-        continue_button = WebDriverWait(driver, WAIT_TIMEOUT).until(
-            EC.presence_of_element_located((By.XPATH, "//button[@data-testid='checkout-btn' and @aria-disabled='false']"))
-        )
-        driver.execute_script("arguments[0].click();", continue_button)
-
-        # 【新增】刷新后缩放通常会失效，需要重新执行一次
         driver.execute_script("document.body.style.zoom='50%'")
 
-        # --- 后续信息填充 (保持原有结构) ---
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            lambda current_driver: current_driver.execute_script(
+                """
+                const plus = document.querySelector("div.plus[data-disabled='false']");
+                return !!plus;
+                """
+            )
+        )
+        if not click_selector_via_javascript(driver, "div.plus[data-disabled='false']"):
+            raise Exception("无法点击加号")
+
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            lambda current_driver: current_driver.execute_script(
+                """
+                return !!document.querySelector("button[data-testid='checkout-btn'][aria-disabled='false']");
+                """
+            )
+        )
+        if not click_selector_via_javascript(driver, "button[data-testid='checkout-btn'][aria-disabled='false']"):
+            raise Exception("无法点击 Continue")
+
+        driver.execute_script("document.body.style.zoom='50%'")
+
         driver.uc_gui_click_captcha()
-        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "firstName"))).send_keys(First_Name)
-        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "lastName"))).send_keys(Last_Name)
-        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(Email)
-        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "mobile"))).send_keys(Mobile)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "firstName"))).send_keys(FIRST_NAME)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "lastName"))).send_keys(LAST_NAME)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(EMAIL)
+        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.presence_of_element_located((By.ID, "mobile"))).send_keys(MOBILE)
 
         time.sleep(1)
-        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='buyer-info-submit']"))).click()
+        if not click_selector_via_javascript(driver, "button[data-testid='buyer-info-submit']"):
+            raise Exception("无法点击买家信息提交按钮")
 
-        # 下拉框
-        for label, val in [("domestic or international", Domestic_or_International), ("postgraduate or undergraduate", Postgrad_or_Undergrad), ("USU member", USU_Member)]:
-            dropdown = WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, f"//label/span[contains(text(),'{label}')]/ancestor::div[contains(@class,'Select')]//div[@role='combobox']")))
-            dropdown.click()
-            WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, f"//div[@role='option' and normalize-space()='{val}']"))).click()
+        for label, value in [
+            ("domestic or international", DOMESTIC_OR_INTERNATIONAL),
+            ("postgraduate or undergraduate", POSTGRAD_OR_UNDERGRAD),
+            ("USU member", USU_MEMBER),
+        ]:
+            if not click_dropdown_option_via_javascript(driver, label, value):
+                raise Exception(f"无法选择下拉项 {label} -> {value}")
 
-        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='ticket-info-submit']"))).click()
+        if not click_selector_via_javascript(driver, "button[data-testid='ticket-info-submit']"):
+            raise Exception("无法提交附加问题")
 
-        # 成功校验
-        WebDriverWait(driver, WAIT_TIMEOUT).until(EC.any_of(EC.url_contains("complete"), EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'View ticket')]"))))
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            EC.any_of(
+                EC.url_contains("complete"),
+                EC.presence_of_element_located((By.XPATH, "//button[contains(., 'View ticket')]")),
+            )
+        )
         print(f"恭喜！{slot} 预订成功。")
         schedule.clear()
-        
+
     except Exception as e:
         print(f"流程出错: {e}")
+        should_hold_on_error = True
 
-# =========================
-# --- Scheduler ---
-# =========================
-# 设定在抢票时间前 1 分钟启动准备程序 (例如 8:00 抢，则 7:59 启动)
-schedule.every().day.at("07:59").do(job, "08:00:00", "10:00am")
-schedule.every().day.at("08:29").do(job, "08:30:00", "10:30am")
-schedule.every().day.at("08:59").do(job, "09:00:00", "11:00am")
-schedule.every().day.at("09:29").do(job, "09:30:00", "11:30am")
-schedule.every().day.at("09:59").do(job, "10:00:00", "12:00pm")
-schedule.every().day.at("10:29").do(job, "10:30:00", "12:30pm")
-schedule.every().day.at("10:59").do(job, "11:00:00", "1:00pm")
-schedule.every().day.at("11:29").do(job, "11:30:00", "1:30pm")
-schedule.every().day.at("11:59").do(job, "12:00:00", "2:00pm")
-schedule.every().day.at("12:29").do(job, "12:30:00", "2:30pm")
+    finally:
+        if should_hold_on_error and HOLD_BROWSER_ON_ERROR:
+            hold_browser_open_on_error()
+        cleanup_driver(driver, session_dir)
+
+
+for warmup_time, trigger_time, slot in BOOKING_SCHEDULES:
+    schedule.every().day.at(warmup_time).do(job, trigger_time, slot)
 
 wake_display_now()
 keep_display_awake_while_running()
